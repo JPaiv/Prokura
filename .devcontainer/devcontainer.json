@@ -1,0 +1,87 @@
+{
+  "name": "prokura",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".",
+    "target": "dev"
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {
+      "moby": true,
+      "dockerDashComposeVersion": "none"
+    },
+    "ghcr.io/devcontainers/features/kubectl-helm-minikube:1": {
+      "version": "latest",
+      "helm": "latest",
+      "minikube": "none"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": {
+    "cpus": 4,
+    "memory": "8gb",
+    "storage": "32gb"
+  },
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "KUBECONFIG": "/home/vscode/.kube/config",
+    "CLUSTER_NAME": "prokura"
+  },
+  "mounts": [
+    "source=prokura-go-mod-cache,target=/go/pkg/mod,type=volume",
+    "source=prokura-go-build-cache,target=/home/vscode/.cache/go-build,type=volume",
+    "source=prokura-kube,target=/home/vscode/.kube,type=volume"
+  ],
+  "postCreateCommand": "bash .devcontainer/post-create.sh",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "ms-kubernetes-tools.vscode-kubernetes-tools",
+        "redhat.vscode-yaml",
+        "tilt-dev.tiltfile",
+        "ms-azuretools.vscode-docker",
+        "github.vscode-github-actions",
+        "editorconfig.editorconfig",
+        "davidanson.vscode-markdownlint"
+      ],
+      "settings": {
+        "terminal.integrated.defaultProfile.linux": "zsh",
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.insertFinalNewline": true,
+        "go.useLanguageServer": true,
+        "go.toolsManagement.autoUpdate": false,
+        "go.lintTool": "golangci-lint",
+        "go.lintFlags": [
+          "--fast"
+        ],
+        "go.testFlags": [
+          "-race",
+          "-count=1"
+        ],
+        "gopls": {
+          "ui.semanticTokens": true,
+          "formatting.gofumpt": true,
+          "ui.diagnostic.staticcheck": true
+        },
+        "[go]": {
+          "editor.defaultFormatter": "golang.go",
+          "editor.codeActionsOnSave": {
+            "source.organizeImports": "explicit"
+          }
+        },
+        "yaml.schemas": {
+          "kubernetes": [
+            "config/**/*.yaml",
+            "examples/**/*.yaml",
+            "charts/**/templates/*.yaml"
+          ]
+        },
+        "[yaml]": {
+          "editor.tabSize": 2
+        }
+      }
+    }
+  }
+}
