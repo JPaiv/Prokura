@@ -1,0 +1,217 @@
+# Task runner for Prokura (https://taskfile.dev).
+# Run `task --list` for an overview.
+version: "3"
+
+vars:
+  # Image URL to use for all building/pushing image targets.
+  IMG: '{{.IMG | default "controller:latest"}}'
+  # Version of kubebuilder assets downloaded by setup-envtest.
+  ENVTEST_K8S_VERSION: 1.31.0
+  CONTAINER_TOOL: '{{.CONTAINER_TOOL | default "docker"}}'
+  KUBECTL: '{{.KUBECTL | default "kubectl"}}'
+
+  LOCALBIN:
+    sh: echo "$(pwd)/bin"
+  KUSTOMIZE: "{{.LOCALBIN}}/kustomize"
+  CONTROLLER_GEN: "{{.LOCALBIN}}/controller-gen"
+  ENVTEST: "{{.LOCALBIN}}/setup-envtest"
+  GOLANGCI_LINT: "{{.LOCALBIN}}/golangci-lint"
+
+  KUSTOMIZE_VERSION: v5.5.0
+  CONTROLLER_TOOLS_VERSION: v0.16.4
+  ENVTEST_VERSION: release-0.19
+  GOLANGCI_LINT_VERSION: v2.12.2
+
+tasks:
+  default:
+    deps: [build]
+
+  # --- Development ---
+
+  manifests:
+    desc: Generate WebhookConfiguration, ClusterRole and CustomResourceDefinition objects.
+    deps: [controller-gen]
+    cmds:
+      - '{{.CONTROLLER_GEN}} rbac:roleName=manager-role crd webhook paths="./..." output:crd:artifacts:config=config/crd/bases'
+
+  generate:
+    desc: Generate DeepCopy, DeepCopyInto and DeepCopyObject implementations.
+    deps: [controller-gen]
+    cmds:
+      - '{{.CONTROLLER_GEN}} object:headerFile="hack/boilerplate.go.txt" paths="./..."'
+
+  fmt:
+    desc: Run go fmt against code.
+    cmds:
+      - go fmt ./...
+
+  vet:
+    desc: Run go vet against code.
+    cmds:
+      - go vet ./...
+
+  test:
+    desc: Run unit and envtest-based tests.
+    deps: [manifests, generate, envtest]
+    cmds:
+      - task: fmt
+      - task: vet
+      - |
+        KUBEBUILDER_ASSETS="$({{.ENVTEST}} use {{.ENVTEST_K8S_VERSION}} --bin-dir {{.LOCALBIN}} -p path)" \
+          go test $(go list ./... | grep -v /e2e) -coverprofile cover.out
+
+  test-e2e:
+    desc: Run the e2e tests against a kind cluster.
+    deps: [manifests, generate]
+    preconditions:
+      - sh: command -v kind
+        msg: "kind is not installed."
+      - sh: kind get clusters | grep -q .
+        msg: "No kind cluster is running. Start one before running the e2e tests."
+    cmds:
+      - task: fmt
+      - task: vet
+      - go test ./test/e2e/ -v -ginkgo.v
+
+  lint:
+    desc: Run golangci-lint.
+    deps: [golangci-lint]
+    cmds:
+      - "{{.GOLANGCI_LINT}} run"
+
+  lint-fix:
+    desc: Run golangci-lint and apply fixes.
+    deps: [golangci-lint]
+    cmds:
+      - "{{.GOLANGCI_LINT}} run --fix"
+
+  # --- Build ---
+
+  build:
+    desc: Build the manager binary.
+    deps: [manifests, generate]
+    cmds:
+      - task: fmt
+      - task: vet
+      - go build -o bin/manager cmd/main.go
+
+  run:
+    desc: Run the controller from your host.
+    deps: [manifests, generate]
+    cmds:
+      - task: fmt
+      - task: vet
+      - go run ./cmd/main.go
+
+  docker-build:
+    desc: Build the manager container image.
+    cmds:
+      - "{{.CONTAINER_TOOL}} build -t {{.IMG}} ."
+
+  docker-push:
+    desc: Push the manager container image.
+    cmds:
+      - "{{.CONTAINER_TOOL}} push {{.IMG}}"
+
+  build-installer:
+    desc: Generate a consolidated install YAML with CRDs and deployment.
+    deps: [manifests, generate, kustomize]
+    cmds:
+      - mkdir -p dist
+      - cd config/manager && {{.KUSTOMIZE}} edit set image controller={{.IMG}}
+      - "{{.KUSTOMIZE}} build config/default > dist/install.yaml"
+
+  # --- Deployment ---
+
+  install:
+    desc: Install CRDs into the cluster in ~/.kube/config.
+    deps: [manifests, kustomize]
+    cmds:
+      - "{{.KUSTOMIZE}} build config/crd | {{.KUBECTL}} apply -f -"
+
+  uninstall:
+    desc: Uninstall CRDs from the cluster.
+    deps: [manifests, kustomize]
+    cmds:
+      - "{{.KUSTOMIZE}} build config/crd | {{.KUBECTL}} delete --ignore-not-found -f -"
+
+  deploy:
+    desc: Deploy the controller to the cluster.
+    deps: [manifests, kustomize]
+    cmds:
+      - cd config/manager && {{.KUSTOMIZE}} edit set image controller={{.IMG}}
+      - "{{.KUSTOMIZE}} build config/default | {{.KUBECTL}} apply -f -"
+
+  undeploy:
+    desc: Undeploy the controller from the cluster.
+    deps: [kustomize]
+    cmds:
+      - "{{.KUSTOMIZE}} build config/default | {{.KUBECTL}} delete --ignore-not-found -f -"
+
+  # --- Tool installs (versioned, into ./bin) ---
+
+  kustomize:
+    desc: Download kustomize into ./bin if necessary.
+    cmds:
+      - task: go-install-tool
+        vars:
+          {
+            BIN: "{{.KUSTOMIZE}}",
+            PKG: sigs.k8s.io/kustomize/kustomize/v5,
+            VERSION: "{{.KUSTOMIZE_VERSION}}",
+          }
+    status:
+      - test -f {{.KUSTOMIZE}}-{{.KUSTOMIZE_VERSION}}
+
+  controller-gen:
+    desc: Download controller-gen into ./bin if necessary.
+    cmds:
+      - task: go-install-tool
+        vars:
+          {
+            BIN: "{{.CONTROLLER_GEN}}",
+            PKG: sigs.k8s.io/controller-tools/cmd/controller-gen,
+            VERSION: "{{.CONTROLLER_TOOLS_VERSION}}",
+          }
+    status:
+      - test -f {{.CONTROLLER_GEN}}-{{.CONTROLLER_TOOLS_VERSION}}
+
+  envtest:
+    desc: Download setup-envtest into ./bin if necessary.
+    cmds:
+      - task: go-install-tool
+        vars:
+          {
+            BIN: "{{.ENVTEST}}",
+            PKG: sigs.k8s.io/controller-runtime/tools/setup-envtest,
+            VERSION: "{{.ENVTEST_VERSION}}",
+          }
+    status:
+      - test -f {{.ENVTEST}}-{{.ENVTEST_VERSION}}
+
+  golangci-lint:
+    desc: Download the golangci-lint binary into ./bin if necessary.
+    cmds:
+      # Binary install: building golangci-lint v2 from source needs a newer
+      # Go toolchain than the project itself.
+      - mkdir -p {{.LOCALBIN}}
+      - |
+        curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/HEAD/install.sh \
+          | sh -s -- -b {{.LOCALBIN}} {{.GOLANGCI_LINT_VERSION}}
+        mv "{{.GOLANGCI_LINT}}" "{{.GOLANGCI_LINT}}-{{.GOLANGCI_LINT_VERSION}}"
+        ln -sf "{{.GOLANGCI_LINT}}-{{.GOLANGCI_LINT_VERSION}}" "{{.GOLANGCI_LINT}}"
+    status:
+      - test -f {{.GOLANGCI_LINT}}-{{.GOLANGCI_LINT_VERSION}}
+
+  go-install-tool:
+    internal: true
+    cmds:
+      - mkdir -p {{.LOCALBIN}}
+      - |
+        if [ ! -f "{{.BIN}}-{{.VERSION}}" ]; then
+          echo "Downloading {{.PKG}}@{{.VERSION}}"
+          rm -f "{{.BIN}}"
+          GOBIN={{.LOCALBIN}} go install {{.PKG}}@{{.VERSION}}
+          mv "{{.BIN}}" "{{.BIN}}-{{.VERSION}}"
+        fi
+        ln -sf "{{.BIN}}-{{.VERSION}}" "{{.BIN}}"
