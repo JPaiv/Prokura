@@ -4,6 +4,31 @@ metadata:
   labels:
     app.kubernetes.io/name: prokura
     app.kubernetes.io/managed-by: kustomize
-  name: envelope-sample
+  name: restart-deployment
 spec:
-  # TODO(user): Add fields here
+  description: Roll the pods of a Deployment. Reversible, no data impact.
+  tier: reversible
+  principals:
+    - kind: ServiceAccount
+      namespace: demo
+      name: demo-agent
+  scope:
+    namespaces:
+      selector:
+        matchLabels:
+          prokura.dev/agents: allowed
+    rules:
+      - apiGroups: ["apps"]
+        resources: ["deployments"]
+        verbs: ["get", "list", "watch", "patch"]
+      - apiGroups: [""]
+        resources: ["pods", "events"]
+        verbs: ["get", "list", "watch"]
+      - apiGroups: [""]
+        resources: ["pods/log"]
+        verbs: ["get"]
+  mandate:
+    ttl: 10m
+    maxCalls: 50
+  approval:
+    required: false
