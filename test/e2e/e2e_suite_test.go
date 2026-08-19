@@ -61,17 +61,17 @@ var _ = BeforeSuite(func() {
 	_ = utils.UncommentCode("config/default/kustomization.yaml", "#- ../prometheus", "#")
 
 	By("generating files")
-	cmd := exec.Command("make", "generate")
+	cmd := exec.Command("task", "generate")
 	_, err := utils.Run(cmd)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run make generate")
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run task generate")
 
 	By("generating manifests")
-	cmd = exec.Command("make", "manifests")
+	cmd = exec.Command("task", "manifests")
 	_, err = utils.Run(cmd)
-	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run make manifests")
+	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to run task manifests")
 
 	By("building the manager(Operator) image")
-	cmd = exec.Command("make", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
+	cmd = exec.Command("task", "docker-build", fmt.Sprintf("IMG=%s", projectImage))
 	_, err = utils.Run(cmd)
 	ExpectWithOffset(1, err).NotTo(HaveOccurred(), "Failed to build the manager(Operator) image")
 
