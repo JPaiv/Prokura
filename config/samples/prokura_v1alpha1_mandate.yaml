@@ -1,0 +1,9 @@
+apiVersion: prokura.dev/v1alpha1
+kind: Mandate
+metadata:
+  labels:
+    app.kubernetes.io/name: prokura
+    app.kubernetes.io/managed-by: kustomize
+  name: mandate-sample
+spec:
+  # TODO(user): Add fields here

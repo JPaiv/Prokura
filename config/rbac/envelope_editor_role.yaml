@@ -1,0 +1,27 @@
+# permissions for end users to edit envelopes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: prokura
+    app.kubernetes.io/managed-by: kustomize
+  name: envelope-editor-role
+rules:
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes/status
+  verbs:
+  - get

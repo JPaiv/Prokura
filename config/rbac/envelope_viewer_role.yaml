@@ -1,0 +1,23 @@
+# permissions for end users to view envelopes.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    app.kubernetes.io/name: prokura
+    app.kubernetes.io/managed-by: kustomize
+  name: envelope-viewer-role
+rules:
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes
+  verbs:
+  - get
+  - list
+  - watch
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes/status
+  verbs:
+  - get
