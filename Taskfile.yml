@@ -151,6 +151,7 @@ tasks:
   # --- Tool installs (versioned, into ./bin) ---
 
   kustomize:
+    run: once
     desc: Download kustomize into ./bin if necessary.
     cmds:
       - task: go-install-tool
@@ -164,6 +165,7 @@ tasks:
       - test -f {{.KUSTOMIZE}}-{{.KUSTOMIZE_VERSION}}
 
   controller-gen:
+    run: once
     desc: Download controller-gen into ./bin if necessary.
     cmds:
       - task: go-install-tool
@@ -177,6 +179,7 @@ tasks:
       - test -f {{.CONTROLLER_GEN}}-{{.CONTROLLER_TOOLS_VERSION}}
 
   envtest:
+    run: once
     desc: Download setup-envtest into ./bin if necessary.
     cmds:
       - task: go-install-tool
@@ -190,6 +193,7 @@ tasks:
       - test -f {{.ENVTEST}}-{{.ENVTEST_VERSION}}
 
   golangci-lint:
+    run: once
     desc: Download the golangci-lint binary into ./bin if necessary.
     cmds:
       # Binary install: building golangci-lint v2 from source needs a newer
@@ -205,6 +209,7 @@ tasks:
 
   go-install-tool:
     internal: true
+    run: when_changed
     cmds:
       - mkdir -p {{.LOCALBIN}}
       - |

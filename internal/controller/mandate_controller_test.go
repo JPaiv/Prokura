@@ -37,8 +37,7 @@ var _ = Describe("Mandate Controller", func() {
 		ctx := context.Background()
 
 		typeNamespacedName := types.NamespacedName{
-			Name:      resourceName,
-			Namespace: "default", // TODO(user):Modify as needed
+			Name: resourceName,
 		}
 		mandate := &prokurav1alpha1.Mandate{}
 
@@ -48,8 +47,7 @@ var _ = Describe("Mandate Controller", func() {
 			if err != nil && errors.IsNotFound(err) {
 				resource := &prokurav1alpha1.Mandate{
 					ObjectMeta: metav1.ObjectMeta{
-						Name:      resourceName,
-						Namespace: "default",
+						Name: resourceName,
 					},
 					// TODO(user): Specify other spec details if needed.
 				}
