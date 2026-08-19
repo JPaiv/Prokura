@@ -32,7 +32,7 @@ import (
 
 var _ = Describe("Mandate Controller", func() {
 	Context("When reconciling a resource", func() {
-		const resourceName = "test-resource"
+		const resourceName = "test-mandate"
 
 		ctx := context.Background()
 
@@ -49,7 +49,14 @@ var _ = Describe("Mandate Controller", func() {
 					ObjectMeta: metav1.ObjectMeta{
 						Name: resourceName,
 					},
-					// TODO(user): Specify other spec details if needed.
+					Spec: prokurav1alpha1.MandateSpec{
+						EnvelopeName: "test-envelope",
+						Principal:    "system:serviceaccount:demo:demo-agent",
+						Scope: prokurav1alpha1.MandateScope{
+							Namespaces: []string{"demo"},
+							Ticket:     "OPS-123",
+						},
+					},
 				}
 				Expect(k8sClient.Create(ctx, resource)).To(Succeed())
 			}
