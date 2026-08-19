@@ -1,0 +1,43 @@
+# kube-apiserver audit policy for the local dev cluster.
+#
+# Audit policy rules match on the *authenticated* user. For calls made by the
+# Prokura proxy that is the proxy's ServiceAccount; the envelope identity,
+# groups and the prokura.dev/* extras appear under `impersonatedUser` in the
+# event, because the audit filter runs before the impersonation filter.
+apiVersion: audit.k8s.io/v1
+kind: Policy
+omitStages:
+  - RequestReceived
+rules:
+  # Everything the proxy does on behalf of a mandate, with request/response bodies.
+  - level: RequestResponse
+    users:
+      - system:serviceaccount:prokura-system:prokura-proxy
+
+  # Prokura's own API objects (Envelopes, Mandates).
+  - level: RequestResponse
+    resources:
+      - group: prokura.dev
+
+  # Control-plane noise.
+  - level: None
+    users:
+      - system:kube-proxy
+      - system:kube-scheduler
+      - system:kube-controller-manager
+      - system:apiserver
+  - level: None
+    userGroups:
+      - system:nodes
+  - level: None
+    nonResourceURLs:
+      - /healthz*
+      - /readyz*
+      - /livez*
+      - /metrics
+      - /version
+      - /openapi*
+      - /api*
+
+  # Everything else: who did what, without bodies.
+  - level: Metadata
