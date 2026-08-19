@@ -1,0 +1,5 @@
+## Append samples of your project ##
+resources:
+- prokura_v1alpha1_envelope.yaml
+- prokura_v1alpha1_mandate.yaml
+# +kubebuilder:scaffold:manifestskustomizesamples

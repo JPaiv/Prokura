@@ -1,0 +1,35 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: manager-role
+rules:
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes
+  - mandates
+  verbs:
+  - create
+  - delete
+  - get
+  - list
+  - patch
+  - update
+  - watch
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes/finalizers
+  - mandates/finalizers
+  verbs:
+  - update
+- apiGroups:
+  - prokura.dev
+  resources:
+  - envelopes/status
+  - mandates/status
+  verbs:
+  - get
+  - patch
+  - update
