@@ -23,7 +23,7 @@ It is also independent of the MCP gateway. You can use it with Traefik Hub, agen
 
 *Prokura* is the Nordic and German legal term for a commercial power of attorney: a limited authorization to act on someone's behalf. That is the idea behind the project.
 
-> **Status: pre-alpha.** The API group is `v1alpha1` and may change. The proxy has not received an independent security review. Use Prokura in development and test clusters, not production. Read [SECURITY.md](SECURITY.md) before relying on it for security.
+> **Status: pre-alpha, and not yet working.** The `Envelope` and `Mandate` API types exist. The controller, the proxy, and the token service do not. Everything below describes the intended design, and the [Roadmap](#roadmap) says what is actually built. Do not use Prokura for anything you care about yet.
 
 ---
 
@@ -483,12 +483,83 @@ The complete threat model, including threats that Prokura does not address, is a
 
 ## Roadmap
 
-| Version | Scope                                                                                                                                                                                   |
-| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| v0.1    | `Envelope` and `Mandate` CRDs, controller, proxy, RFC 8693 token service, ServiceAccount / OIDC / SPIFFE principals, Helm chart, kind-based end-to-end tests                            |
-| v0.2    | Approval flows (`kubectl prokura approve`, webhook approvers such as Slack), revocation, `prokura` CLI and kubeconfig helper, JWKS endpoint for gateways                                |
-| v0.3    | Parameter constraints in envelope rules, such as allowed patch paths and replica limits; Kyverno policy pack; OpenFGA example; gateway policy emitters for Traefik Hub and agentgateway |
-| Later   | Two-phase writes, where the proxy requires a dry-run before apply; multi-cluster proxies using one token service; Backstage plugin showing active mandates                              |
+### Where the project is now
+
+The `Envelope` and `Mandate` API types exist, with generated CRDs, a devcontainer, and CI.
+
+Nothing is enforced yet. Both reconcilers are still the kubebuilder scaffold, and the proxy, the token service, and the validating webhook have not been written.
+
+Everything described above is therefore a design, not a working system. Read the roadmap below as the plan for making it real.
+
+### v0.1 — the quick start, working on kind
+
+The goal of v0.1 is the [Quick start](#quick-start) above, running end to end with no manual steps.
+
+The milestones are ordered by dependency. Each is a reviewable pull request, or a short series of them.
+
+**0. The missing documents.**
+`SECURITY.md`, `CONTRIBUTING.md`, and `docs/threat-model.md`.
+The README links to all three and none of them exist.
+`SECURITY.md` comes first, because the README already tells people to read it and to report vulnerabilities privately.
+
+**1. Envelope RBAC controller.**
+A `ClusterRole` per envelope identity, built from `spec.scope.rules`, and a `RoleBinding` in every namespace the scope selects.
+Watch namespaces, so a label change is picked up.
+Clean up with a finalizer, because a cluster-scoped `Envelope` cannot own a namespaced `RoleBinding`.
+Set `status.identity`, `observedGeneration`, and the `Ready` condition.
+
+**2. Impersonation rights.**
+The single `ClusterRole` that lets the proxy ServiceAccount impersonate, restricted by `resourceNames` to the envelope identities that currently exist, and narrowed again when an envelope is deleted.
+This is what bounds the proxy's blast radius.
+
+**3. Envelope validating webhook.**
+Reject the rules listed in [What an envelope can never grant](#what-an-envelope-can-never-grant).
+Reject wildcards in `apiGroups`, `resources`, and `verbs`, since a wildcard silently includes them.
+Reject a `namespaces` scope with neither `selector` nor `names`.
+This must land before the proxy: it is the boundary the security model rests on.
+
+**4. Token service.**
+The RFC 8693 endpoint.
+ServiceAccount principals only, validated with TokenReview.
+Parse the `scope` parameter, check it against the envelope, create the `Mandate`, sign the JWT, and serve JWKS.
+The signing key lives in a Secret and is rotated by hand for now.
+
+**5. Proxy.**
+Validate the mandate, look the `Mandate` up from a cache, check phase and call budget, and forward upstream with impersonation headers.
+Count calls without putting agent traffic on the API server's write path.
+One structured log line per request, carrying the run id.
+
+**6. Mandate lifecycle.**
+Move mandates to `Expired` at `status.expiresAt` and collect them after a retention period.
+Make a revocation take effect in the proxy without waiting for a cache resync.
+
+**7. OIDC and SPIFFE principals.**
+JWKS validation with claim matching, and JWT-SVID validation against a trust bundle endpoint.
+
+**8. Helm chart.**
+Namespace, both Deployments, both ServiceAccounts, webhook certificates, and the signing key bootstrap.
+
+**9. End-to-end tests.**
+The quick-start path as a test on kind: the allowed call succeeds, an out-of-scope resource is 403, an out-of-scope namespace is 403, a revoked mandate is 401, and an exhausted budget is rejected.
+Assert that the run id reaches the audit log.
+
+### Open design questions
+
+These are settled during v0.1, not before it. They are listed because each one changes what the milestones above look like.
+
+* **One `RoleBinding` per selected namespace, or one `ClusterRoleBinding`?** Per-namespace bindings keep the restriction in RBAC, where the API server enforces it, but an envelope that selects two hundred namespaces then produces two hundred bindings that track label churn. A single `ClusterRoleBinding` moves the namespace restriction into the proxy and admission, where a bug is a bypass.
+* **Where does the call counter live?** Writing `status.calls` on every request puts agent traffic on the API server's write path. Holding it in memory means two proxy replicas do not share it, which turns `maxCalls` into a per-replica limit unless requests for a run are pinned to one replica.
+* **Does the token service return a token for a `Pending` mandate?** Returning an unusable token is simpler for the client than making it poll and exchange again. It also means a token exists, and can leak, before anyone approved it.
+* **What happens to a long-running `watch` when the mandate expires?** A watch opened in the first second of a ten-minute TTL is still open in minute eleven unless the proxy cuts it. The same question applies to the call budget: one watch is one call that never ends.
+* **Does the proxy check the envelope scope itself, or leave it to RBAC?** Checking in both places means the two can disagree, and the proxy's copy becomes a second thing to keep correct. Checking in neither is not an option. Leaving it to RBAC alone costs an API-server round trip per denial and records every denied agent request in the audit log.
+
+### After v0.1
+
+| Version | Scope                                                                                                                                                                                                                 |
+| ------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| v0.2    | Approval flows (`kubectl prokura approve`, webhook approvers such as Slack); the `prokura` CLI, with `kubeconfig`, `revoke`, and `mandates`; a proxy that can run more than one replica; signed releases with an SBOM |
+| v0.3    | Parameter constraints in envelope rules, such as allowed patch paths and replica limits; Kyverno policy pack; OpenFGA example; gateway policy emitters for Traefik Hub and agentgateway                               |
+| Later   | Two-phase writes, where the proxy requires a dry-run before apply; multi-cluster proxies using one token service; Backstage plugin showing active mandates                                                            |
 
 The project does **not** plan to become:
 
