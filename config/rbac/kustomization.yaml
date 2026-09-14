@@ -9,6 +9,10 @@ resources:
 - role_binding.yaml
 - leader_election_role.yaml
 - leader_election_role_binding.yaml
+# The proxy's ServiceAccount and the binding to the impersonation ClusterRole,
+# whose rules the controller writes.
+- proxy_service_account.yaml
+- proxy_impersonation_role_binding.yaml
 # The following RBAC configurations are used to protect
 # the metrics endpoint with authn/authz. These configurations
 # ensure that only authorized users and service accounts

@@ -20,6 +20,11 @@ import (
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
+// RunExtraKey is the user extra the proxy impersonates with, holding the run
+// id of the mandate. Admission policies and the audit log see the run id
+// under this key.
+const RunExtraKey = "prokura.dev/run"
+
 // MandatePhase is the lifecycle phase of a mandate.
 // +kubebuilder:validation:Enum=Pending;Active;Revoked;Expired
 type MandatePhase string

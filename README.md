@@ -485,9 +485,9 @@ The complete threat model, including threats that Prokura does not address, is a
 
 ### Where the project is now
 
-The `Envelope` and `Mandate` API types exist, with generated CRDs, a devcontainer, and CI. The envelope controller reconciles the RBAC for an envelope identity, which is milestone 1 below.
+The `Envelope` and `Mandate` API types exist, with generated CRDs, a devcontainer, and CI. The envelope controller reconciles the RBAC for an envelope identity, which is milestone 1 below. The controller also keeps the proxy's impersonation rights narrowed to the envelope identities that exist, which is milestone 2.
 
-Nothing is enforced yet. An envelope identity now has permissions, but nothing issues a mandate or impersonates the identity: the mandate reconciler is still the kubebuilder scaffold, and the proxy, the token service, and the validating webhook have not been written.
+Nothing is enforced yet. An envelope identity now has permissions, and the proxy ServiceAccount may impersonate it, but nothing issues a mandate or runs as that ServiceAccount: the mandate reconciler is still the kubebuilder scaffold, and the proxy, the token service, and the validating webhook have not been written.
 
 Everything described above is therefore a design, not a working system. Read the roadmap below as the plan for making it real.
 
@@ -508,7 +508,7 @@ Watch namespaces, so a label change is picked up.
 Clean up with a finalizer, because a cluster-scoped `Envelope` cannot own a namespaced `RoleBinding`.
 Set `status.identity`, `observedGeneration`, and the `Ready` condition.
 
-**2. Impersonation rights.**
+**2. Impersonation rights.** *Done.*
 The single `ClusterRole` that lets the proxy ServiceAccount impersonate, restricted by `resourceNames` to the envelope identities that currently exist, and narrowed again when an envelope is deleted.
 This is what bounds the proxy's blast radius.
 
