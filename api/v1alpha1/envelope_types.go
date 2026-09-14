@@ -29,6 +29,10 @@ const EnvelopeIdentityPrefix = "prokura:envelope:"
 // identity belongs to. Admission policies can match on it.
 const EnvelopesGroup = "prokura:envelopes"
 
+// EnvelopeReady is the condition type reporting whether the RBAC for the
+// envelope identity exists and matches the spec.
+const EnvelopeReady = "Ready"
+
 // Tier classifies the risk of the work an envelope allows.
 // +kubebuilder:validation:Enum=read;reversible;irreversible
 type Tier string
