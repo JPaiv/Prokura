@@ -20,6 +20,27 @@ container. The script installs the Go tools, downloads the envtest binaries,
 and configures the shell. It is safe to re-run with
 **Dev Containers: Rebuild Container**.
 
+## Git signing and SSH
+
+The SSH authentication and signing key is in 1Password. The private key never
+enters the container:
+
+1. On the host, turn on the 1Password SSH agent and point `SSH_AUTH_SOCK` at
+   it (`~/.1password/agent.sock` on Linux). VS Code forwards that agent into
+   the container.
+2. Add the public key to GitHub twice: once as an **Authentication key** and
+   once as a **Signing key**.
+
+[post-create.sh](post-create.sh) pins the identity and the public key. It
+configures git to sign commits and tags with SSH (`ssh-keygen` through the
+agent), and to push to `github.com/JPaiv` over SSH with only that key.
+1Password asks you to approve each use.
+
+## Terminal
+
+The integrated terminal uses a Matrix palette: green on black. Red and yellow
+stay distinct so test failures and warnings still stand out.
+
 ## Local cluster
 
 Use [cluster.sh](cluster.sh) to manage a local cluster:

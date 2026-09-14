@@ -80,6 +80,28 @@
         },
         "[yaml]": {
           "editor.tabSize": 2
+        },
+        "workbench.colorCustomizations": {
+          "terminal.background": "#0D0208",
+          "terminal.foreground": "#00FF41",
+          "terminalCursor.foreground": "#00FF41",
+          "terminal.selectionBackground": "#008F1166",
+          "terminal.ansiBlack": "#0D0208",
+          "terminal.ansiBrightBlack": "#3B7A45",
+          "terminal.ansiRed": "#FF3B3B",
+          "terminal.ansiBrightRed": "#FF6B6B",
+          "terminal.ansiGreen": "#008F11",
+          "terminal.ansiBrightGreen": "#00FF41",
+          "terminal.ansiYellow": "#C6E03A",
+          "terminal.ansiBrightYellow": "#EEFF41",
+          "terminal.ansiBlue": "#00A86B",
+          "terminal.ansiBrightBlue": "#39FF9A",
+          "terminal.ansiMagenta": "#7DDB3A",
+          "terminal.ansiBrightMagenta": "#B6FF5C",
+          "terminal.ansiCyan": "#20C20E",
+          "terminal.ansiBrightCyan": "#6BFF8A",
+          "terminal.ansiWhite": "#A8FFB5",
+          "terminal.ansiBrightWhite": "#D1FFD6"
         }
       }
     }
