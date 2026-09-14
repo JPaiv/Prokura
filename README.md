@@ -485,9 +485,9 @@ The complete threat model, including threats that Prokura does not address, is a
 
 ### Where the project is now
 
-The `Envelope` and `Mandate` API types exist, with generated CRDs, a devcontainer, and CI.
+The `Envelope` and `Mandate` API types exist, with generated CRDs, a devcontainer, and CI. The envelope controller reconciles the RBAC for an envelope identity, which is milestone 1 below.
 
-Nothing is enforced yet. Both reconcilers are still the kubebuilder scaffold, and the proxy, the token service, and the validating webhook have not been written.
+Nothing is enforced yet. An envelope identity now has permissions, but nothing issues a mandate or impersonates the identity: the mandate reconciler is still the kubebuilder scaffold, and the proxy, the token service, and the validating webhook have not been written.
 
 Everything described above is therefore a design, not a working system. Read the roadmap below as the plan for making it real.
 
@@ -502,7 +502,7 @@ The milestones are ordered by dependency. Each is a reviewable pull request, or 
 The README links to all three and none of them exist.
 `SECURITY.md` comes first, because the README already tells people to read it and to report vulnerabilities privately.
 
-**1. Envelope RBAC controller.**
+**1. Envelope RBAC controller.** *Done.*
 A `ClusterRole` per envelope identity, built from `spec.scope.rules`, and a `RoleBinding` in every namespace the scope selects.
 Watch namespaces, so a label change is picked up.
 Clean up with a finalizer, because a cluster-scoped `Envelope` cannot own a namespaced `RoleBinding`.
