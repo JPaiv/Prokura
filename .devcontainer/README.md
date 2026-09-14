@@ -36,6 +36,11 @@ configures git to sign commits and tags with SSH (`ssh-keygen` through the
 agent), and to push to `github.com/JPaiv` over SSH with only that key.
 1Password asks you to approve each use.
 
+## Terminal
+
+The integrated terminal uses a Matrix palette: green on black. Red and yellow
+stay distinct so test failures and warnings still stand out.
+
 ## Local cluster
 
 Use [cluster.sh](cluster.sh) to manage a local cluster:
